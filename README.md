@@ -41,8 +41,9 @@ Run `hyprctl reload` after removal to clear the session-only dynamic bindings.
 
 The service runs only the fixed `/usr/bin/hyprctl` executable with a minimal
 environment. It has no network access, shell execution, elevated privileges,
-or retained command output. Its one startup command is stopped after 10
-seconds if it has not completed.
+or retained command output. It polls the active Hyprland instance and binding
+table, restoring the shortcuts when a reload clears them. Binding updates are
+stopped after 10 seconds if `hyprctl` does not complete.
 
 ## License
 

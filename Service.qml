@@ -39,7 +39,6 @@ Item {
 
   function handleInstances(output) {
     var signature = Model.activeInstanceSignature(output)
-    console.warn("Numpad Shortcuts probe: instance=" + signature)
     if (!signature) return
     if (signature !== root.activeInstanceSignature) {
       root.activeInstanceSignature = signature
@@ -59,7 +58,6 @@ Item {
   function handleBindings(output) {
     if (root.probedBindingInstance !== root.activeInstanceSignature) return
     var active = Model.bindingsAreActive(output)
-    console.warn("Numpad Shortcuts probe: bindingsActive=" + active)
     if (!active) root.applyBindings(root.activeInstanceSignature)
   }
 
