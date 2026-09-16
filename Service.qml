@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Io
 import "Model.js" as Model
 
@@ -60,6 +61,24 @@ Item {
     repeat: true
     running: true
     onTriggered: root.probeInstance()
+  }
+
+  Timer {
+    id: reapplyTimer
+    interval: 100
+    repeat: false
+    onTriggered: {
+      if (root.activeInstanceSignature) root.applyBindings(root.activeInstanceSignature)
+      else root.probeInstance()
+    }
+  }
+
+  Connections {
+    target: Hyprland
+    function onRawEvent(event) {
+      var name = String(event && event.name ? event.name : "")
+      if (Model.shouldReapplyBindings(name)) reapplyTimer.restart()
+    }
   }
 
   Process {

@@ -37,5 +37,7 @@ assert.deepEqual(
   ["--instance", "active-signature", "eval", "return true"],
   "binding commands explicitly target the discovered Hyprland instance"
 );
+assert.equal(Model.shouldReapplyBindings("configreloaded"), true, "a same-instance config reload restores dynamic bindings");
+assert.equal(Model.shouldReapplyBindings("workspace"), false, "unrelated Hyprland events do not re-run binding setup");
 
 console.log("Model shortcut mapping tests passed");

@@ -75,10 +75,15 @@ function hyprctlEvalArguments(script, instanceSignature) {
   return ["--instance", instanceSignature, "eval", script];
 }
 
+function shouldReapplyBindings(eventName) {
+  return eventName === "configreloaded";
+}
+
 if (typeof module !== "undefined") module.exports = {
   bindings: bindings,
   applyScript: applyScript,
   cleanupScript: cleanupScript,
   activeInstanceSignature: activeInstanceSignature,
-  hyprctlEvalArguments: hyprctlEvalArguments
+  hyprctlEvalArguments: hyprctlEvalArguments,
+  shouldReapplyBindings: shouldReapplyBindings
 };
