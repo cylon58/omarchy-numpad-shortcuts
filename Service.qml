@@ -39,6 +39,7 @@ Item {
 
   function handleInstances(output) {
     var signature = Model.activeInstanceSignature(output)
+    console.warn("Numpad Shortcuts probe: instance=" + signature)
     if (!signature) return
     if (signature !== root.activeInstanceSignature) {
       root.activeInstanceSignature = signature
@@ -57,7 +58,9 @@ Item {
 
   function handleBindings(output) {
     if (root.probedBindingInstance !== root.activeInstanceSignature) return
-    if (!Model.bindingsAreActive(output)) root.applyBindings(root.activeInstanceSignature)
+    var active = Model.bindingsAreActive(output)
+    console.warn("Numpad Shortcuts probe: bindingsActive=" + active)
+    if (!active) root.applyBindings(root.activeInstanceSignature)
   }
 
   Timer {
@@ -89,6 +92,9 @@ Item {
       waitForEnd: true
       onStreamFinished: root.handleBindings(text)
     }
+    onExited: function(exitCode) {
+      if (exitCode !== 0) console.warn("Numpad Shortcuts: binding probe exited with " + exitCode)
+    }
   }
 
   Process {
@@ -99,6 +105,9 @@ Item {
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: root.handleInstances(text)
+    }
+    onExited: function(exitCode) {
+      if (exitCode !== 0) console.warn("Numpad Shortcuts: instance probe exited with " + exitCode)
     }
   }
 
