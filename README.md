@@ -1,5 +1,7 @@
 # Numpad Shortcuts
 
+![Numpad Shortcuts preview](preview.png)
+
 An Omarchy service plugin that adds the number-pad equivalents of Omarchy’s
 workspace and terminal shortcuts.
 
