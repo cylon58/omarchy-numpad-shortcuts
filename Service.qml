@@ -1,6 +1,5 @@
 import QtQuick
 import Quickshell
-import Quickshell.Hyprland
 import Quickshell.Io
 import "Model.js" as Model
 
@@ -11,6 +10,7 @@ Item {
   readonly property int commandTimeoutMs: 10000
   property string activeInstanceSignature: ""
   property string pendingInstanceSignature: ""
+  property string probedBindingInstance: ""
   readonly property var safeEnvironment: ({
     "PATH": "/usr/bin:/bin",
     "LANG": "C.UTF-8",
@@ -39,9 +39,25 @@ Item {
 
   function handleInstances(output) {
     var signature = Model.activeInstanceSignature(output)
-    if (!signature || signature === root.activeInstanceSignature) return
-    root.activeInstanceSignature = signature
-    root.applyBindings(signature)
+    if (!signature) return
+    if (signature !== root.activeInstanceSignature) {
+      root.activeInstanceSignature = signature
+      root.applyBindings(signature)
+      return
+    }
+    root.probeBindings(signature)
+  }
+
+  function probeBindings(instanceSignature) {
+    if (bindingProbe.running) return
+    root.probedBindingInstance = instanceSignature
+    bindingProbe.command = [root.hyprctlPath, "--instance", instanceSignature, "-j", "binds"]
+    bindingProbe.running = true
+  }
+
+  function handleBindings(output) {
+    if (root.probedBindingInstance !== root.activeInstanceSignature) return
+    if (!Model.bindingsAreActive(output)) root.applyBindings(root.activeInstanceSignature)
   }
 
   Timer {
@@ -57,27 +73,21 @@ Item {
   }
 
   Timer {
-    interval: 1000
+    interval: 2000
     repeat: true
     running: true
     onTriggered: root.probeInstance()
   }
 
-  Timer {
-    id: reapplyTimer
-    interval: 100
-    repeat: false
-    onTriggered: {
-      if (root.activeInstanceSignature) root.applyBindings(root.activeInstanceSignature)
-      else root.probeInstance()
-    }
-  }
-
-  Connections {
-    target: Hyprland
-    function onRawEvent(event) {
-      var name = String(event && event.name ? event.name : "")
-      if (Model.shouldReapplyBindings(name)) reapplyTimer.restart()
+  Process {
+    id: bindingProbe
+    running: false
+    command: []
+    clearEnvironment: true
+    environment: root.safeEnvironment
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: root.handleBindings(text)
     }
   }
 

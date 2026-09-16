@@ -75,8 +75,16 @@ function hyprctlEvalArguments(script, instanceSignature) {
   return ["--instance", instanceSignature, "eval", script];
 }
 
-function shouldReapplyBindings(eventName) {
-  return eventName === "configreloaded";
+function bindingsAreActive(output) {
+  try {
+    var activeBindings = JSON.parse(output);
+    if (!Array.isArray(activeBindings)) return false;
+    return activeBindings.some(function(binding) {
+      return binding.key === "KP_Enter" && binding.description === "Open terminal";
+    });
+  } catch (error) {
+    return false;
+  }
 }
 
 if (typeof module !== "undefined") module.exports = {
@@ -85,5 +93,5 @@ if (typeof module !== "undefined") module.exports = {
   cleanupScript: cleanupScript,
   activeInstanceSignature: activeInstanceSignature,
   hyprctlEvalArguments: hyprctlEvalArguments,
-  shouldReapplyBindings: shouldReapplyBindings
+  bindingsAreActive: bindingsAreActive
 };

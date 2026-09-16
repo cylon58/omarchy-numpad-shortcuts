@@ -37,7 +37,11 @@ assert.deepEqual(
   ["--instance", "active-signature", "eval", "return true"],
   "binding commands explicitly target the discovered Hyprland instance"
 );
-assert.equal(Model.shouldReapplyBindings("configreloaded"), true, "a same-instance config reload restores dynamic bindings");
-assert.equal(Model.shouldReapplyBindings("workspace"), false, "unrelated Hyprland events do not re-run binding setup");
+assert.equal(
+  Model.bindingsAreActive(JSON.stringify([{ key: "KP_Enter", description: "Open terminal" }])),
+  true,
+  "the live binding probe recognizes the plugin's terminal shortcut"
+);
+assert.equal(Model.bindingsAreActive("[]"), false, "a cleared Hyprland binding table triggers restoration");
 
 console.log("Model shortcut mapping tests passed");
