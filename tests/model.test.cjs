@@ -27,7 +27,15 @@ assert.match(script, /hl\.unbind\("SUPER \+ KP_1"\)\nhl\.bind\("SUPER \+ KP_1", 
 assert.match(script, /hl\.bind\("SUPER \+ KP_Enter", hl\.dsp\.exec_cmd\("\/usr\/share\/omarchy\/bin\/omarchy-launch-terminal"\), \{ description = "Open terminal" \}\)$/);
 assert.equal(Model.cleanupScript().split("\n").length, 21, "cleanup covers every dynamically added shortcut");
 
-assert.equal(Model.shouldReapplyBindings("configreloaded"), true, "a Hyprland config reload restores dynamic bindings");
-assert.equal(Model.shouldReapplyBindings("workspace"), false, "unrelated Hyprland events do not re-run binding setup");
+const instanceJson = JSON.stringify([
+  { instance: "active-signature", pid: 1234, wl_socket: "wayland-1" }
+]);
+assert.equal(Model.activeInstanceSignature(instanceJson), "active-signature", "the live Hyprland instance can be targeted after a reload");
+assert.equal(Model.activeInstanceSignature("not json"), "", "invalid instance output is ignored");
+assert.deepEqual(
+  Model.hyprctlEvalArguments("return true", "active-signature"),
+  ["--instance", "active-signature", "eval", "return true"],
+  "binding commands explicitly target the discovered Hyprland instance"
+);
 
 console.log("Model shortcut mapping tests passed");

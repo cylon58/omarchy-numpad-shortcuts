@@ -1,6 +1,5 @@
 import QtQuick
 import Quickshell
-import Quickshell.Hyprland
 import Quickshell.Io
 import "Model.js" as Model
 
@@ -9,6 +8,8 @@ Item {
 
   readonly property string hyprctlPath: "/usr/bin/hyprctl"
   readonly property int commandTimeoutMs: 10000
+  property string activeInstanceSignature: ""
+  property string pendingInstanceSignature: ""
   readonly property var safeEnvironment: ({
     "PATH": "/usr/bin:/bin",
     "LANG": "C.UTF-8",
@@ -17,15 +18,29 @@ Item {
     "HYPRLAND_INSTANCE_SIGNATURE": Quickshell.env("HYPRLAND_INSTANCE_SIGNATURE") || ""
   })
 
-  function commandFor(script) {
-    return [hyprctlPath, "eval", script]
+  function commandFor(script, instanceSignature) {
+    return [hyprctlPath].concat(Model.hyprctlEvalArguments(script, instanceSignature))
   }
 
-  function applyBindings() {
-    if (applyProcess.running) return;
-    applyProcess.command = commandFor(Model.applyScript());
+  function applyBindings(instanceSignature) {
+    if (applyProcess.running) {
+      root.pendingInstanceSignature = instanceSignature
+      return
+    }
+    applyProcess.command = commandFor(Model.applyScript(), instanceSignature)
     applyProcess.running = true;
     deadline.restart();
+  }
+
+  function probeInstance() {
+    if (!instanceProbe.running) instanceProbe.running = true
+  }
+
+  function handleInstances(output) {
+    var signature = Model.activeInstanceSignature(output)
+    if (!signature || signature === root.activeInstanceSignature) return
+    root.activeInstanceSignature = signature
+    root.applyBindings(signature)
   }
 
   Timer {
@@ -41,17 +56,20 @@ Item {
   }
 
   Timer {
-    id: reapplyTimer
-    interval: 100
-    repeat: false
-    onTriggered: root.applyBindings()
+    interval: 1000
+    repeat: true
+    running: true
+    onTriggered: root.probeInstance()
   }
 
-  Connections {
-    target: Hyprland
-    function onRawEvent(event) {
-      var name = String(event && event.name ? event.name : "");
-      if (Model.shouldReapplyBindings(name)) reapplyTimer.restart();
+  Process {
+    id: instanceProbe
+    command: [root.hyprctlPath, "instances", "-j"]
+    clearEnvironment: true
+    environment: root.safeEnvironment
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: root.handleInstances(text)
     }
   }
 
@@ -64,8 +82,13 @@ Item {
     onExited: function(exitCode, exitStatus) {
       deadline.stop();
       if (exitCode !== 0) console.warn("Numpad Shortcuts: hyprctl exited with " + exitCode + " (status " + exitStatus + ").");
+      if (root.pendingInstanceSignature) {
+        var signature = root.pendingInstanceSignature
+        root.pendingInstanceSignature = ""
+        root.applyBindings(signature)
+      }
     }
   }
 
-  Component.onCompleted: applyBindings()
+  Component.onCompleted: probeInstance()
 }

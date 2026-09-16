@@ -61,13 +61,24 @@ function cleanupScript() {
   return commands.join("\n");
 }
 
-function shouldReapplyBindings(eventName) {
-  return eventName === "configreloaded";
+function activeInstanceSignature(output) {
+  try {
+    var instances = JSON.parse(output);
+    if (!Array.isArray(instances) || instances.length === 0) return "";
+    return typeof instances[0].instance === "string" ? instances[0].instance : "";
+  } catch (error) {
+    return "";
+  }
+}
+
+function hyprctlEvalArguments(script, instanceSignature) {
+  return ["--instance", instanceSignature, "eval", script];
 }
 
 if (typeof module !== "undefined") module.exports = {
   bindings: bindings,
   applyScript: applyScript,
   cleanupScript: cleanupScript,
-  shouldReapplyBindings: shouldReapplyBindings
+  activeInstanceSignature: activeInstanceSignature,
+  hyprctlEvalArguments: hyprctlEvalArguments
 };
