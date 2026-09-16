@@ -9,7 +9,8 @@ workspace and terminal shortcuts.
 
 The workspace shortcuts work with Num Lock either on or off. The plugin also
 sets Hyprland’s `input:numlock_by_default` option to `true` for the current
-session, so newly initialized keypads start in numeric mode.
+session, so newly initialized keypads start in numeric mode. The shortcuts are
+restored automatically after Hyprland reloads its configuration.
 
 ## Requirements
 

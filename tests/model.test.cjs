@@ -27,4 +27,7 @@ assert.match(script, /hl\.unbind\("SUPER \+ KP_1"\)\nhl\.bind\("SUPER \+ KP_1", 
 assert.match(script, /hl\.bind\("SUPER \+ KP_Enter", hl\.dsp\.exec_cmd\("\/usr\/share\/omarchy\/bin\/omarchy-launch-terminal"\), \{ description = "Open terminal" \}\)$/);
 assert.equal(Model.cleanupScript().split("\n").length, 21, "cleanup covers every dynamically added shortcut");
 
+assert.equal(Model.shouldReapplyBindings("configreloaded"), true, "a Hyprland config reload restores dynamic bindings");
+assert.equal(Model.shouldReapplyBindings("workspace"), false, "unrelated Hyprland events do not re-run binding setup");
+
 console.log("Model shortcut mapping tests passed");

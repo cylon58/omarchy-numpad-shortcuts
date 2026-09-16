@@ -61,4 +61,13 @@ function cleanupScript() {
   return commands.join("\n");
 }
 
-if (typeof module !== "undefined") module.exports = { bindings: bindings, applyScript: applyScript, cleanupScript: cleanupScript };
+function shouldReapplyBindings(eventName) {
+  return eventName === "configreloaded";
+}
+
+if (typeof module !== "undefined") module.exports = {
+  bindings: bindings,
+  applyScript: applyScript,
+  cleanupScript: cleanupScript,
+  shouldReapplyBindings: shouldReapplyBindings
+};

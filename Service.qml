@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Io
 import "Model.js" as Model
 
@@ -36,6 +37,21 @@ Item {
         console.warn("Numpad Shortcuts: hyprctl did not finish within " + root.commandTimeoutMs + "ms; stopping it.");
         applyProcess.running = false;
       }
+    }
+  }
+
+  Timer {
+    id: reapplyTimer
+    interval: 100
+    repeat: false
+    onTriggered: root.applyBindings()
+  }
+
+  Connections {
+    target: Hyprland
+    function onRawEvent(event) {
+      var name = String(event && event.name ? event.name : "");
+      if (Model.shouldReapplyBindings(name)) reapplyTimer.restart();
     }
   }
 
