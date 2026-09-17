@@ -117,7 +117,7 @@ Item {
             font.pixelSize: 16
           }
           GuideText {
-            text: "Open this guide: Super + Ctrl + Numpad Divide"
+            text: "Toggle this guide: Super + Ctrl + Numpad Divide"
             color: "#8ac5ff"
           }
 

@@ -87,6 +87,18 @@ function bindingKeys(binding) {
   return binding.modifiers + " + " + binding.key;
 }
 
+function shellPath(path) {
+  if (/^[A-Za-z0-9_./-]+$/.test(path)) return path;
+  return "'" + path.replace(/'/g, "'\\''") + "'";
+}
+
+function luaString(value) {
+  return '"' + value.replace(/[\\"\x00-\x1f\x7f]/g, function(character) {
+    if (character === '"' || character === "\\") return "\\" + character;
+    return "\\" + ("00" + character.charCodeAt(0)).slice(-3);
+  }) + '"';
+}
+
 function applyScript(pluginLuaPath, guideLauncherPath) {
   var commands = [
     'hl.config({ ["input.numlock_by_default"] = true })',
@@ -104,7 +116,7 @@ function applyScript(pluginLuaPath, guideLauncherPath) {
     } else if (binding.dispatcher === "exec") {
       commands.push("hl.bind(\"" + keys + "\", hl.dsp.exec_cmd(\"" + binding.argument + "\"), { description = \"" + binding.description + "\" })");
     } else if (binding.dispatcher === "guide") {
-      commands.push("hl.bind(\"" + keys + "\", hl.dsp.exec_cmd(\"" + guideLauncherPath.replace(/\\/g, "\\\\").replace(/\"/g, '\\\\"') + "\"), { description = \"" + binding.description + "\" })");
+      commands.push("hl.bind(\"" + keys + "\", hl.dsp.exec_cmd(" + luaString(shellPath(guideLauncherPath)) + "), { description = \"" + binding.description + "\" })");
     } else {
       commands.push("hl.bind(\"" + keys + "\", " + binding.argument + ", { description = \"" + binding.description + "\" })");
     }
@@ -127,13 +139,13 @@ function guideSections() {
       title: "Switch focus",
       summary: "Super + keypad number",
       shortcuts: descriptionsFor(function(binding) { return binding.dispatcher === "workspace"; }),
-      details: "The focus outline travels to a different occupied workspace while windows remain in their workspaces."
+      details: "Switch to a target workspace, occupied or empty. The illustration shows the focus outline moving to an occupied workspace while windows stay put."
     },
     {
       title: "Move a window",
       summary: "Super + Shift + keypad number",
       shortcuts: descriptionsFor(function(binding) { return binding.dispatcher === "move"; }),
-      details: "The focused window travels from its source workspace to a blank target workspace."
+      details: "Move the focused window to a target workspace, occupied or empty. The illustration shows it moving from its source to a blank target workspace."
     },
     {
       title: "Protect a window",
@@ -145,7 +157,7 @@ function guideSections() {
       title: "Consolidate gaps",
       summary: "Super + Ctrl + Shift + keypad Enter",
       shortcuts: descriptionsFor(function(binding) { return binding.description.indexOf("Consolidate workspaces") === 0; }),
-      details: "An unprotected workspace group shifts left into a blank numeric workspace, while a protected workspace remains fixed. Add Alt to limit consolidation to the focused monitor."
+      details: "Consolidation shifts unprotected windows left into blank numeric workspaces. Protected windows stay put and can preserve gaps. Add Alt to limit consolidation to the focused monitor."
     }
   ];
 }

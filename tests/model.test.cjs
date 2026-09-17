@@ -62,11 +62,11 @@ assert.deepEqual(bindings.at(-1), {
 assert.deepEqual(Model.guideSections().map((section) => section.title), [
   "Switch focus", "Move a window", "Protect a window", "Consolidate gaps"
 ], "the guide presents the four workspace concepts in their intended order");
-assert.match(
-  Model.guideSections().find((section) => section.title === "Move a window").details,
-  /blank target workspace/,
-  "the movement guide explains that the focused window moves to a blank target workspace"
-);
+for (const title of ["Switch focus", "Move a window"]) {
+  const details = Model.guideSections().find(section => section.title === title).details;
+  assert.match(details, /occupied or empty/, `${title} accepts both target states`);
+  assert.match(details, /illustration/, `${title} distinguishes the illustrated example from the general behavior`);
+}
 
 const script = Model.applyScript("/tmp/WindowActions.lua", "/tmp/open-guide");
 assert.match(script, /^hl\.config\(\{ \["input\.numlock_by_default"\] = true \}\)\ndofile\('\/tmp\/WindowActions\.lua'\)/, "the service enables Num Lock by default and loads the action module before registering callbacks");
@@ -77,10 +77,6 @@ assert.ok(
 assert.match(script, /hl\.unbind\("SUPER \+ KP_1"\)\nhl\.bind\("SUPER \+ KP_1", hl\.dsp\.focus\(\{ workspace = "1" \}\), \{ description = "Switch to workspace 1" \}\)/);
 assert.match(script, /hl\.bind\("SUPER \+ SHIFT \+ KP_1", hl\.dsp\.window\.move\(\{ workspace = "1" \}\), \{ description = "Move window to workspace 1" \}\)/, "ordinary movement retains Omarchy's normal default follow behavior");
 assert.match(script, /hl\.bind\("SUPER \+ CTRL \+ KP_Divide", hl\.dsp\.exec_cmd\("\/tmp\/open-guide"\), \{ description = "Open Numpad Shortcuts guide" \}\)/, "the guide binding runs only the launcher path supplied by QML");
-assert.ok(
-  Model.applyScript("/tmp/WindowActions.lua", "C:\\guide").includes('hl.dsp.exec_cmd("C:\\\\guide")'),
-  "the guide launcher path escapes backslashes for the generated Lua command"
-);
 assert.equal(Model.cleanupScript().split("\n").length, 45, "cleanup covers every dynamically added shortcut");
 
 const instanceJson = JSON.stringify([

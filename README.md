@@ -16,16 +16,21 @@ restored automatically after Hyprland reloads its configuration.
 
 ## Guide
 
-Open the guide with `Super + Ctrl + keypad Divide`. It teaches the shortcuts
+Toggle the guide with `Super + Ctrl + keypad Divide`. It teaches the shortcuts
 concept-first, with a workspace illustration and four main actions:
 
-- **Switch focus** — move the focus outline to another occupied workspace;
+- **Switch focus** — move the focus outline to another workspace, occupied or empty;
   windows stay where they are.
-- **Move a window** — send the focused window to a blank target workspace.
+- **Move a window** — send the focused window to a target workspace, occupied or empty.
 - **Protect a window** — keep the focused window in place during consolidation
   for the current session.
 - **Consolidate gaps** — shift unprotected workspace groups left into blank
   numeric workspaces; add `Alt` to limit this to the focused monitor.
+
+The illustrations show examples: focus moves to an occupied workspace, and a
+window moves to a blank one. Either action also works with the other target
+state. Consolidation selects blank destinations; protected windows can preserve
+gaps.
 
 Choose **Show full shortcut list** in the guide to expand the live binding
 inventory: workspace switching and moving (including Num Lock-off variants),
@@ -35,6 +40,7 @@ terminal, this guide, protection, and both consolidation actions.
 
 **Add to launcher** is explicit and optional: it asks for confirmation before
 creating `~/.local/share/applications/cylon58-numpad-shortcuts-guide.desktop`.
+The launcher summons the guide, so activating it again keeps the guide open.
 It never overwrites an existing custom launcher. The plugin owns and removes
 only that file when it carries the
 `X-Omarchy-Numpad-Shortcuts-Guide=true` marker; remove it with:

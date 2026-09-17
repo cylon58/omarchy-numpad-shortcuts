@@ -42,6 +42,13 @@ case "$operation" in
     script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
     plugin_dir=$(CDPATH= cd -- "$script_dir/.." && pwd -P)
     entry_exec="$plugin_dir/bin/open-guide"
+    # Desktop entries decode string escapes before Exec argument quoting.
+    # Escape both layers, and keep literal percent signs out of field expansion.
+    entry_exec=$(printf '%s' "$entry_exec" | sed -z \
+      -e 's/\\/\\\\\\\\/g' \
+      -e 's/["`$]/\\\\&/g' \
+      -e 's/%/%%/g' \
+      -e 's/\n/\\n/g; s/\t/\\t/g; s/\r/\\r/g')
     temporary_entry=$(mktemp "$applications_dir/.cylon58-numpad-shortcuts-guide.XXXXXX")
     trap 'rm -f "$temporary_entry"' 0 HUP INT TERM
     chmod 600 "$temporary_entry"
@@ -50,12 +57,14 @@ case "$operation" in
       'Type=Application' \
       'Name=Numpad Shortcuts' \
       'Comment=Learn Numpad Shortcuts for Omarchy workspaces' \
-      "Exec=$entry_exec" \
+      "Exec=\"$entry_exec\"" \
       'Terminal=false' \
       'NoDisplay=false' \
       "$marker" >"$temporary_entry"
     chmod 644 "$temporary_entry"
-    mv -f "$temporary_entry" "$entry"
+    # A hard link publishes the complete file only if the destination is absent.
+    # -T also refuses a directory (or symlink to one) created after our check.
+    ln -T -- "$temporary_entry" "$entry"
     ;;
   remove)
     if ! has_marker; then

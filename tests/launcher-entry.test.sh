@@ -17,7 +17,7 @@ printf '%s\n' \
   'Type=Application' \
   'Name=Numpad Shortcuts' \
   'Comment=Learn Numpad Shortcuts for Omarchy workspaces' \
-  "Exec=$plugin_dir/bin/open-guide" \
+  "Exec=\"$plugin_dir/bin/open-guide\"" \
   'Terminal=false' \
   'NoDisplay=false' \
   'X-Omarchy-Numpad-Shortcuts-Guide=true' >"$expected"
