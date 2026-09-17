@@ -61,7 +61,7 @@ assert.ok(
   "the Lua module path escapes backslashes and single quotes"
 );
 assert.match(script, /hl\.unbind\("SUPER \+ KP_1"\)\nhl\.bind\("SUPER \+ KP_1", hl\.dsp\.focus\(\{ workspace = "1" \}\), \{ description = "Switch to workspace 1" \}\)/);
-assert.match(script, /hl\.bind\("SUPER \+ SHIFT \+ KP_1", hl\.dsp\.window\.move\(\{ workspace = "1" \}\), \{ description = "Move window to workspace 1" \}\)/, "ordinary movement does not follow the moved window");
+assert.match(script, /hl\.bind\("SUPER \+ SHIFT \+ KP_1", hl\.dsp\.window\.move\(\{ workspace = "1" \}\), \{ description = "Move window to workspace 1" \}\)/, "ordinary movement retains Omarchy's normal default follow behavior");
 assert.equal(Model.cleanupScript().split("\n").length, 44, "cleanup covers every dynamically added shortcut");
 
 const instanceJson = JSON.stringify([

@@ -80,6 +80,22 @@ assert_moves({ { "0xmove", 2, false } })
 
 fixture({
   active_monitor = a,
+  workspaces = { { id = 1, monitor = a }, { id = 3, monitor = a } },
+  windows = { win("0x3", 3, a) },
+})
+NumpadShortcuts.consolidateFocusedMonitor()
+assert_moves({ { "0x3", 1, false } })
+
+fixture({
+  active_monitor = a,
+  workspaces = { { id = 1, monitor = a }, { id = 2, monitor = b }, { id = 3, monitor = a } },
+  windows = { win("0x1", 1, a), win("0x3", 3, a) },
+})
+NumpadShortcuts.consolidateFocusedMonitor()
+assert_moves({})
+
+fixture({
+  active_monitor = a,
   windows = { win("0x1", 1, a), win("0x3", 3, a), win("0x2", 2, b) },
 })
 NumpadShortcuts.consolidateFocusedMonitor()
