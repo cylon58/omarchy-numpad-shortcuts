@@ -56,6 +56,11 @@ assert.deepEqual(bindings.at(-1), {
 assert.deepEqual(Model.guideSections().map((section) => section.title), [
   "Switch focus", "Move a window", "Protect a window", "Consolidate gaps"
 ], "the guide presents the four workspace concepts in their intended order");
+assert.match(
+  Model.guideSections().find((section) => section.title === "Move a window").details,
+  /blank target workspace/,
+  "the movement guide explains that the focused window moves to a blank target workspace"
+);
 
 const script = Model.applyScript("/tmp/WindowActions.lua", "/tmp/open-guide");
 assert.match(script, /^hl\.config\(\{ \["input\.numlock_by_default"\] = true \}\)\ndofile\('\/tmp\/WindowActions\.lua'\)/, "the service enables Num Lock by default and loads the action module before registering callbacks");

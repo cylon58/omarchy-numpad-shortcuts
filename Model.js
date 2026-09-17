@@ -133,7 +133,7 @@ function guideSections() {
       title: "Move a window",
       summary: "Super + Shift + keypad number",
       shortcuts: descriptionsFor(function(binding) { return binding.dispatcher === "move"; }),
-      details: "The focused window travels from its source workspace to a target workspace."
+      details: "The focused window travels from its source workspace to a blank target workspace."
     },
     {
       title: "Protect a window",
