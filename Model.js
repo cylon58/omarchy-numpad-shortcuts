@@ -16,39 +16,88 @@ function bindings() {
   for (var i = 0; i < workspaceKeys.length; i++) {
     var keys = workspaceKeys[i];
     result.push({
+      modifiers: "SUPER",
       key: keys[0],
       description: "Switch to workspace " + keys[2],
       dispatcher: "workspace",
       argument: keys[2]
     });
     result.push({
+      modifiers: "SUPER",
       key: keys[1],
       description: "Switch to workspace " + keys[2],
       dispatcher: "workspace",
       argument: keys[2]
     });
+    result.push({
+      modifiers: "SUPER + SHIFT",
+      key: keys[0],
+      description: "Move window to workspace " + keys[2],
+      dispatcher: "move",
+      argument: keys[2]
+    });
+    result.push({
+      modifiers: "SUPER + SHIFT",
+      key: keys[1],
+      description: "Move window to workspace " + keys[2],
+      dispatcher: "move",
+      argument: keys[2]
+    });
   }
 
   result.push({
+    modifiers: "SUPER",
     key: "KP_Enter",
     description: "Open terminal",
     dispatcher: "exec",
     argument: "/usr/share/omarchy/bin/omarchy-launch-terminal"
   });
+  result.push({
+    modifiers: "SUPER + CTRL",
+    key: "KP_Enter",
+    description: "Toggle window consolidation protection",
+    dispatcher: "callback",
+    argument: "NumpadShortcuts.toggleProtection"
+  });
+  result.push({
+    modifiers: "SUPER + CTRL + SHIFT",
+    key: "KP_Enter",
+    description: "Consolidate workspaces on all monitors",
+    dispatcher: "callback",
+    argument: "NumpadShortcuts.consolidateGlobal"
+  });
+  result.push({
+    modifiers: "SUPER + CTRL + SHIFT + ALT",
+    key: "KP_Enter",
+    description: "Consolidate workspaces on focused monitor",
+    dispatcher: "callback",
+    argument: "NumpadShortcuts.consolidateFocusedMonitor"
+  });
   return result;
 }
 
-function applyScript() {
-  var commands = ["hl.config({ [\"input.numlock_by_default\"] = true })"];
+function bindingKeys(binding) {
+  return binding.modifiers + " + " + binding.key;
+}
+
+function applyScript(pluginLuaPath) {
+  var commands = [
+    'hl.config({ ["input.numlock_by_default"] = true })',
+    "dofile('" + pluginLuaPath.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "')"
+  ];
   var all = bindings();
   for (var i = 0; i < all.length; i++) {
     var binding = all[i];
-    var keys = "SUPER + " + binding.key;
+    var keys = bindingKeys(binding);
     commands.push("hl.unbind(\"" + keys + "\")");
     if (binding.dispatcher === "workspace") {
       commands.push("hl.bind(\"" + keys + "\", hl.dsp.focus({ workspace = \"" + binding.argument + "\" }), { description = \"" + binding.description + "\" })");
-    } else {
+    } else if (binding.dispatcher === "move") {
+      commands.push("hl.bind(\"" + keys + "\", hl.dsp.window.move({ workspace = \"" + binding.argument + "\" }), { description = \"" + binding.description + "\" })");
+    } else if (binding.dispatcher === "exec") {
       commands.push("hl.bind(\"" + keys + "\", hl.dsp.exec_cmd(\"" + binding.argument + "\"), { description = \"" + binding.description + "\" })");
+    } else {
+      commands.push("hl.bind(\"" + keys + "\", " + binding.argument + ", { description = \"" + binding.description + "\" })");
     }
   }
   return commands.join("\n");
@@ -57,7 +106,7 @@ function applyScript() {
 function cleanupScript() {
   var all = bindings();
   var commands = [];
-  for (var i = 0; i < all.length; i++) commands.push("hl.unbind(\"SUPER + " + all[i].key + "\")");
+  for (var i = 0; i < all.length; i++) commands.push("hl.unbind(\"" + bindingKeys(all[i]) + "\")");
   return commands.join("\n");
 }
 
@@ -79,8 +128,17 @@ function bindingsAreActive(output) {
   try {
     var activeBindings = JSON.parse(output);
     if (!Array.isArray(activeBindings)) return false;
-    return activeBindings.some(function(binding) {
-      return binding.key === "KP_Enter" && binding.description === "Open terminal";
+    var descriptions = [
+      "Open terminal",
+      "Move window to workspace 1",
+      "Toggle window consolidation protection",
+      "Consolidate workspaces on all monitors",
+      "Consolidate workspaces on focused monitor"
+    ];
+    return descriptions.every(function(description) {
+      return activeBindings.some(function(binding) {
+        return binding.description === description;
+      });
     });
   } catch (error) {
     return false;

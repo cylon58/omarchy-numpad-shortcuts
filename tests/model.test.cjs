@@ -3,29 +3,48 @@ const Model = require("../Model.js");
 
 const bindings = Model.bindings();
 
-assert.equal(bindings.length, 21, "all numeric and navigation keypad keysyms plus keypad Enter are bound");
+assert.equal(bindings.length, 44, "all focus, movement, terminal, and window-management keypad shortcuts are bound");
 assert.deepEqual(
-  bindings.filter((binding) => binding.dispatcher === "workspace" && binding.argument === "1").map((binding) => binding.key),
-  ["KP_1", "KP_End"],
+  bindings.filter((binding) => binding.dispatcher === "workspace" && binding.argument === "1").map((binding) => [binding.modifiers, binding.key]),
+  [["SUPER", "KP_1"], ["SUPER", "KP_End"]],
   "keypad 1 works with Num Lock on and off"
 );
 assert.deepEqual(
-  bindings.filter((binding) => binding.dispatcher === "workspace" && binding.argument === "10").map((binding) => binding.key),
-  ["KP_0", "KP_Insert"],
+  bindings.filter((binding) => binding.dispatcher === "workspace" && binding.argument === "10").map((binding) => [binding.modifiers, binding.key]),
+  [["SUPER", "KP_0"], ["SUPER", "KP_Insert"]],
   "keypad 0 selects workspace 10 in both keypad modes"
 );
+assert.deepEqual(
+  bindings.filter((binding) => binding.dispatcher === "move" && binding.argument === "1")
+    .map((binding) => [binding.modifiers, binding.key]),
+  [["SUPER + SHIFT", "KP_1"], ["SUPER + SHIFT", "KP_End"]]
+);
+assert.deepEqual(
+  bindings.filter((binding) => binding.dispatcher === "callback")
+    .map((binding) => [binding.modifiers, binding.key, binding.argument]),
+  [
+    ["SUPER + CTRL", "KP_Enter", "NumpadShortcuts.toggleProtection"],
+    ["SUPER + CTRL + SHIFT", "KP_Enter", "NumpadShortcuts.consolidateGlobal"],
+    ["SUPER + CTRL + SHIFT + ALT", "KP_Enter", "NumpadShortcuts.consolidateFocusedMonitor"]
+  ]
+);
 assert.deepEqual(bindings.at(-1), {
+  modifiers: "SUPER + CTRL + SHIFT + ALT",
   key: "KP_Enter",
-  description: "Open terminal",
-  dispatcher: "exec",
-  argument: "/usr/share/omarchy/bin/omarchy-launch-terminal"
+  description: "Consolidate workspaces on focused monitor",
+  dispatcher: "callback",
+  argument: "NumpadShortcuts.consolidateFocusedMonitor"
 });
 
-const script = Model.applyScript();
-assert.match(script, /^hl\.config\(\{ \["input\.numlock_by_default"\] = true \}\)/, "the service enables Num Lock by default");
+const script = Model.applyScript("/tmp/WindowActions.lua");
+assert.match(script, /^hl\.config\(\{ \["input\.numlock_by_default"\] = true \}\)\ndofile\('\/tmp\/WindowActions\.lua'\)/, "the service enables Num Lock by default and loads the action module before registering callbacks");
+assert.ok(
+  Model.applyScript("C:\\plugin's.lua").includes("dofile('C:\\\\plugin\\'s.lua')"),
+  "the Lua module path escapes backslashes and single quotes"
+);
 assert.match(script, /hl\.unbind\("SUPER \+ KP_1"\)\nhl\.bind\("SUPER \+ KP_1", hl\.dsp\.focus\(\{ workspace = "1" \}\), \{ description = "Switch to workspace 1" \}\)/);
-assert.match(script, /hl\.bind\("SUPER \+ KP_Enter", hl\.dsp\.exec_cmd\("\/usr\/share\/omarchy\/bin\/omarchy-launch-terminal"\), \{ description = "Open terminal" \}\)$/);
-assert.equal(Model.cleanupScript().split("\n").length, 21, "cleanup covers every dynamically added shortcut");
+assert.match(script, /hl\.bind\("SUPER \+ SHIFT \+ KP_1", hl\.dsp\.window\.move\(\{ workspace = "1" \}\), \{ description = "Move window to workspace 1" \}\)/, "ordinary movement does not follow the moved window");
+assert.equal(Model.cleanupScript().split("\n").length, 44, "cleanup covers every dynamically added shortcut");
 
 const instanceJson = JSON.stringify([
   { instance: "active-signature", pid: 1234, wl_socket: "wayland-1" }
@@ -37,11 +56,19 @@ assert.deepEqual(
   ["--instance", "active-signature", "eval", "return true"],
   "binding commands explicitly target the discovered Hyprland instance"
 );
-assert.equal(
-  Model.bindingsAreActive(JSON.stringify([{ key: "KP_Enter", description: "Open terminal" }])),
-  true,
-  "the live binding probe recognizes the plugin's terminal shortcut"
-);
+assert.equal(Model.bindingsAreActive(JSON.stringify([
+  { key: "KP_Enter", description: "Open terminal" },
+  { key: "KP_1", description: "Move window to workspace 1" },
+  { key: "KP_Enter", description: "Toggle window consolidation protection" },
+  { key: "KP_Enter", description: "Consolidate workspaces on all monitors" },
+  { key: "KP_Enter", description: "Consolidate workspaces on focused monitor" }
+])), true, "the live binding probe requires every sentinel shortcut");
+assert.equal(Model.bindingsAreActive(JSON.stringify([
+  { key: "KP_Enter", description: "Open terminal" },
+  { key: "KP_1", description: "Move window to workspace 1" },
+  { key: "KP_Enter", description: "Toggle window consolidation protection" },
+  { key: "KP_Enter", description: "Consolidate workspaces on all monitors" }
+])), false, "a missing window-management sentinel triggers restoration");
 assert.equal(Model.bindingsAreActive("[]"), false, "a cleared Hyprland binding table triggers restoration");
 
 console.log("Model shortcut mapping tests passed");
