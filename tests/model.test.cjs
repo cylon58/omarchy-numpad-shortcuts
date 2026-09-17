@@ -10,6 +10,7 @@ const readme = fs.readFileSync(path.join(pluginRoot, "README.md"), "utf8");
 // Release contract: a packaged guide must be discoverable to both Omarchy and users.
 assert.equal(manifest.version, "0.3.0");
 assert.deepEqual(manifest.kinds, ["service", "panel"]);
+assert.equal(manifest.entryPoints.service, "Service.qml");
 assert.equal(manifest.entryPoints.panel, "Guide.qml");
 assert.ok(readme.includes("Super + Ctrl + keypad Divide"));
 assert.match(readme, /Add to launcher/i);
