@@ -23,6 +23,11 @@ has_marker() {
   [ -f "$entry" ] && grep -Fqx "$marker" "$entry"
 }
 
+if [ -L "$entry" ]; then
+  echo "refusing launcher entry symlink: $entry" >&2
+  exit 1
+fi
+
 case "$operation" in
   install)
     mkdir -p "$applications_dir"

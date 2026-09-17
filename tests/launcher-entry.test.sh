@@ -45,6 +45,29 @@ fi
 cmp "$tmp/unowned-before" "$entry"
 
 rm "$entry"
+ln -s "$tmp/missing.desktop" "$entry"
+for operation in install remove; do
+  if "$helper" "$operation"; then
+    echo "$operation unexpectedly accepted a dangling launcher symlink" >&2
+    exit 1
+  fi
+  test -L "$entry"
+done
+
+rm "$entry"
+printf '%s\n' 'X-Omarchy-Numpad-Shortcuts-Guide=true' >"$tmp/marked-target"
+cp "$tmp/marked-target" "$tmp/marked-target-before"
+ln -s "$tmp/marked-target" "$entry"
+for operation in install remove; do
+  if "$helper" "$operation"; then
+    echo "$operation unexpectedly accepted a launcher symlink to a marked entry" >&2
+    exit 1
+  fi
+  test -L "$entry"
+  cmp "$tmp/marked-target-before" "$tmp/marked-target"
+done
+
+rm "$entry"
 "$helper" install
 "$helper" remove
 test ! -e "$entry"
