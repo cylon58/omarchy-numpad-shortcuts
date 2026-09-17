@@ -9,6 +9,8 @@ Item {
   readonly property string hyprctlPath: "/usr/bin/hyprctl"
   readonly property string windowActionsPath: Quickshell.env("HOME")
     + "/.config/omarchy/plugins/cylon58.numpad-shortcuts/WindowActions.lua"
+  readonly property string guideLauncherPath: Quickshell.env("HOME")
+    + "/.config/omarchy/plugins/cylon58.numpad-shortcuts/bin/open-guide"
   readonly property int commandTimeoutMs: 10000
   property string activeInstanceSignature: ""
   property string pendingInstanceSignature: ""
@@ -30,7 +32,7 @@ Item {
       root.pendingInstanceSignature = instanceSignature
       return
     }
-    applyProcess.command = commandFor(Model.applyScript(root.windowActionsPath), instanceSignature)
+    applyProcess.command = commandFor(Model.applyScript(root.windowActionsPath, root.guideLauncherPath), instanceSignature)
     applyProcess.running = true;
     deadline.restart();
   }

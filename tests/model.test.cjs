@@ -21,7 +21,7 @@ assert.match(readme, /session-only protection/i, "README explains that protectio
 
 const bindings = Model.bindings();
 
-assert.equal(bindings.length, 44, "all focus, movement, terminal, and window-management keypad shortcuts are bound");
+assert.equal(bindings.length, 45, "all focus, movement, terminal, window-management, and guide keypad shortcuts are bound");
 assert.deepEqual(
   bindings.filter((binding) => binding.dispatcher === "workspace" && binding.argument === "1").map((binding) => [binding.modifiers, binding.key]),
   [["SUPER", "KP_1"], ["SUPER", "KP_End"]],
@@ -47,22 +47,30 @@ assert.deepEqual(
   ]
 );
 assert.deepEqual(bindings.at(-1), {
-  modifiers: "SUPER + CTRL + SHIFT + ALT",
-  key: "KP_Enter",
-  description: "Consolidate workspaces on focused monitor",
-  dispatcher: "callback",
-  argument: "NumpadShortcuts.consolidateFocusedMonitor"
+  modifiers: "SUPER + CTRL",
+  key: "KP_Divide",
+  description: "Open Numpad Shortcuts guide",
+  dispatcher: "guide",
+  argument: ""
 });
+assert.deepEqual(Model.guideSections().map((section) => section.title), [
+  "Switch focus", "Move a window", "Protect a window", "Consolidate gaps"
+], "the guide presents the four workspace concepts in their intended order");
 
-const script = Model.applyScript("/tmp/WindowActions.lua");
+const script = Model.applyScript("/tmp/WindowActions.lua", "/tmp/open-guide");
 assert.match(script, /^hl\.config\(\{ \["input\.numlock_by_default"\] = true \}\)\ndofile\('\/tmp\/WindowActions\.lua'\)/, "the service enables Num Lock by default and loads the action module before registering callbacks");
 assert.ok(
-  Model.applyScript("C:\\plugin's.lua").includes("dofile('C:\\\\plugin\\'s.lua')"),
+  Model.applyScript("C:\\plugin's.lua", "C:\\open-guide").includes("dofile('C:\\\\plugin\\'s.lua')"),
   "the Lua module path escapes backslashes and single quotes"
 );
 assert.match(script, /hl\.unbind\("SUPER \+ KP_1"\)\nhl\.bind\("SUPER \+ KP_1", hl\.dsp\.focus\(\{ workspace = "1" \}\), \{ description = "Switch to workspace 1" \}\)/);
 assert.match(script, /hl\.bind\("SUPER \+ SHIFT \+ KP_1", hl\.dsp\.window\.move\(\{ workspace = "1" \}\), \{ description = "Move window to workspace 1" \}\)/, "ordinary movement retains Omarchy's normal default follow behavior");
-assert.equal(Model.cleanupScript().split("\n").length, 44, "cleanup covers every dynamically added shortcut");
+assert.match(script, /hl\.bind\("SUPER \+ CTRL \+ KP_Divide", hl\.dsp\.exec_cmd\("\/tmp\/open-guide"\), \{ description = "Open Numpad Shortcuts guide" \}\)/, "the guide binding runs only the launcher path supplied by QML");
+assert.ok(
+  Model.applyScript("/tmp/WindowActions.lua", "C:\\guide").includes('hl.dsp.exec_cmd("C:\\\\guide")'),
+  "the guide launcher path escapes backslashes for the generated Lua command"
+);
+assert.equal(Model.cleanupScript().split("\n").length, 45, "cleanup covers every dynamically added shortcut");
 
 const instanceJson = JSON.stringify([
   { instance: "active-signature", pid: 1234, wl_socket: "wayland-1" }
@@ -79,7 +87,8 @@ assert.equal(Model.bindingsAreActive(JSON.stringify([
   { key: "KP_1", description: "Move window to workspace 1" },
   { key: "KP_Enter", description: "Toggle window consolidation protection" },
   { key: "KP_Enter", description: "Consolidate workspaces on all monitors" },
-  { key: "KP_Enter", description: "Consolidate workspaces on focused monitor" }
+  { key: "KP_Enter", description: "Consolidate workspaces on focused monitor" },
+  { key: "KP_Divide", description: "Open Numpad Shortcuts guide" }
 ])), true, "the live binding probe requires every sentinel shortcut");
 assert.equal(Model.bindingsAreActive(JSON.stringify([
   { key: "KP_Enter", description: "Open terminal" },

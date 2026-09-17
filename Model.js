@@ -73,6 +73,13 @@ function bindings() {
     dispatcher: "callback",
     argument: "NumpadShortcuts.consolidateFocusedMonitor"
   });
+  result.push({
+    modifiers: "SUPER + CTRL",
+    key: "KP_Divide",
+    description: "Open Numpad Shortcuts guide",
+    dispatcher: "guide",
+    argument: ""
+  });
   return result;
 }
 
@@ -80,7 +87,7 @@ function bindingKeys(binding) {
   return binding.modifiers + " + " + binding.key;
 }
 
-function applyScript(pluginLuaPath) {
+function applyScript(pluginLuaPath, guideLauncherPath) {
   var commands = [
     'hl.config({ ["input.numlock_by_default"] = true })',
     "dofile('" + pluginLuaPath.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "')"
@@ -96,11 +103,51 @@ function applyScript(pluginLuaPath) {
       commands.push("hl.bind(\"" + keys + "\", hl.dsp.window.move({ workspace = \"" + binding.argument + "\" }), { description = \"" + binding.description + "\" })");
     } else if (binding.dispatcher === "exec") {
       commands.push("hl.bind(\"" + keys + "\", hl.dsp.exec_cmd(\"" + binding.argument + "\"), { description = \"" + binding.description + "\" })");
+    } else if (binding.dispatcher === "guide") {
+      commands.push("hl.bind(\"" + keys + "\", hl.dsp.exec_cmd(\"" + guideLauncherPath.replace(/\\/g, "\\\\").replace(/\"/g, '\\\\"') + "\"), { description = \"" + binding.description + "\" })");
     } else {
       commands.push("hl.bind(\"" + keys + "\", " + binding.argument + ", { description = \"" + binding.description + "\" })");
     }
   }
   return commands.join("\n");
+}
+
+function guideSections() {
+  function descriptionsFor(matches) {
+    var selected = bindings().filter(matches);
+    var descriptions = [];
+    for (var i = 0; i < selected.length; i++) {
+      if (descriptions.indexOf(selected[i].description) === -1) descriptions.push(selected[i].description);
+    }
+    return descriptions;
+  }
+
+  return [
+    {
+      title: "Switch focus",
+      summary: "Super + keypad number",
+      shortcuts: descriptionsFor(function(binding) { return binding.dispatcher === "workspace"; }),
+      details: "The focus outline travels to a different occupied workspace while windows remain in their workspaces."
+    },
+    {
+      title: "Move a window",
+      summary: "Super + Shift + keypad number",
+      shortcuts: descriptionsFor(function(binding) { return binding.dispatcher === "move"; }),
+      details: "The focused window travels from its source workspace to a target workspace."
+    },
+    {
+      title: "Protect a window",
+      summary: "Super + Ctrl + keypad Enter",
+      shortcuts: descriptionsFor(function(binding) { return binding.description === "Toggle window consolidation protection"; }),
+      details: "The focused window receives a protection marker and stays put during consolidation for the current session. Protection is session-only."
+    },
+    {
+      title: "Consolidate gaps",
+      summary: "Super + Ctrl + Shift + keypad Enter",
+      shortcuts: descriptionsFor(function(binding) { return binding.description.indexOf("Consolidate workspaces") === 0; }),
+      details: "An unprotected workspace group shifts left into a blank numeric workspace, while a protected workspace remains fixed. Add Alt to limit consolidation to the focused monitor."
+    }
+  ];
 }
 
 function cleanupScript() {
@@ -133,7 +180,8 @@ function bindingsAreActive(output) {
       "Move window to workspace 1",
       "Toggle window consolidation protection",
       "Consolidate workspaces on all monitors",
-      "Consolidate workspaces on focused monitor"
+      "Consolidate workspaces on focused monitor",
+      "Open Numpad Shortcuts guide"
     ];
     return descriptions.every(function(description) {
       return activeBindings.some(function(binding) {
@@ -149,6 +197,7 @@ if (typeof module !== "undefined") module.exports = {
   bindings: bindings,
   applyScript: applyScript,
   cleanupScript: cleanupScript,
+  guideSections: guideSections,
   activeInstanceSignature: activeInstanceSignature,
   hyprctlEvalArguments: hyprctlEvalArguments,
   bindingsAreActive: bindingsAreActive
