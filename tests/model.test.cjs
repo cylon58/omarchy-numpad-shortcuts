@@ -1,6 +1,7 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const { spawnSync } = require("node:child_process");
 const Model = require("../Model.js");
 
 const pluginRoot = path.join(__dirname, "..");
@@ -69,11 +70,17 @@ for (const title of ["Switch focus", "Move a window"]) {
 }
 
 const script = Model.applyScript("/tmp/WindowActions.lua", "/tmp/open-guide");
-assert.match(script, /^hl\.config\(\{ \["input\.numlock_by_default"\] = true \}\)\ndofile\('\/tmp\/WindowActions\.lua'\)/, "the service enables Num Lock by default and loads the action module before registering callbacks");
-assert.ok(
-  Model.applyScript("C:\\plugin's.lua", "C:\\open-guide").includes("dofile('C:\\\\plugin\\'s.lua')"),
-  "the Lua module path escapes backslashes and single quotes"
-);
+assert.ok(script.startsWith('hl.config({ ["input.numlock_by_default"] = true })\ndofile('), "enable Num Lock and load the action module before registering callbacks");
+for (const modulePath of ["/tmp/WindowActions.lua", "C:\\plugin's.lua", '/tmp/double"quote/line\nbreak\ttab.lua']) {
+  const evaluated = spawnSync("lua", ["-e", `
+    hl = { config = function() end, unbind = function() end, bind = function() end,
+      dsp = { focus = function() end, window = { move = function() end }, exec_cmd = function() end } }
+    dofile = function(path) io.write(path); NumpadShortcuts = {} end
+    ${Model.applyScript(modulePath, "/tmp/open-guide")}
+  `], { encoding: "utf8", timeout: 5000 });
+  assert.equal(evaluated.status, 0, `generated Lua parses module paths: ${evaluated.stderr}`);
+  assert.equal(evaluated.stdout, modulePath, "dofile receives the literal module path unchanged");
+}
 assert.match(script, /hl\.unbind\("SUPER \+ KP_1"\)\nhl\.bind\("SUPER \+ KP_1", hl\.dsp\.focus\(\{ workspace = "1" \}\), \{ description = "Switch to workspace 1" \}\)/);
 assert.match(script, /hl\.bind\("SUPER \+ SHIFT \+ KP_1", hl\.dsp\.window\.move\(\{ workspace = "1" \}\), \{ description = "Move window to workspace 1" \}\)/, "ordinary movement retains Omarchy's normal default follow behavior");
 assert.match(script, /hl\.bind\("SUPER \+ CTRL \+ KP_Divide", hl\.dsp\.exec_cmd\("\/tmp\/open-guide"\), \{ description = "Open Numpad Shortcuts guide" \}\)/, "the guide binding runs only the launcher path supplied by QML");
@@ -84,19 +91,31 @@ const instanceJson = JSON.stringify([
 ]);
 assert.equal(Model.activeInstanceSignature(instanceJson), "active-signature", "the live Hyprland instance can be targeted after a reload");
 assert.equal(Model.activeInstanceSignature("not json"), "", "invalid instance output is ignored");
+const multipleInstances = JSON.stringify([{ instance: "other-session" }, { instance: "current-session" }]);
+assert.equal(Model.activeInstanceSignature(multipleInstances, "current-session"), "current-session", "target the shell's own Hyprland instance, not the first listed instance");
+assert.equal(Model.activeInstanceSignature(multipleInstances, "missing-session"), "", "a missing expected session must never select another session");
+assert.equal(Model.activeInstanceSignature(multipleInstances, ""), "", "multiple sessions without a known signature are ambiguous");
+assert.equal(Model.activeInstanceSignature(instanceJson, ""), "active-signature", "an unambiguous single session remains discoverable without an environment signature");
 assert.deepEqual(
   Model.hyprctlEvalArguments("return true", "active-signature"),
   ["--instance", "active-signature", "eval", "return true"],
   "binding commands explicitly target the discovered Hyprland instance"
 );
-assert.equal(Model.bindingsAreActive(JSON.stringify([
-  { key: "KP_Enter", description: "Open terminal" },
-  { key: "KP_1", description: "Move window to workspace 1" },
-  { key: "KP_Enter", description: "Toggle window consolidation protection" },
-  { key: "KP_Enter", description: "Consolidate workspaces on all monitors" },
-  { key: "KP_Enter", description: "Consolidate workspaces on focused monitor" },
-  { key: "KP_Divide", description: "Open Numpad Shortcuts guide" }
-])), true, "the live binding probe requires every sentinel shortcut");
+const modifierMasks = { SUPER: 64, CTRL: 4, SHIFT: 1, ALT: 8 };
+const liveBindings = bindings.map(binding => ({
+  key: binding.key,
+  modmask: binding.modifiers.split(" + ").reduce((mask, modifier) => mask | modifierMasks[modifier], 0),
+  submap: "",
+  description: binding.description
+}));
+assert.equal(Model.bindingsAreActive(JSON.stringify(liveBindings)), true, "every expected live binding is present");
+assert.equal(Model.bindingsAreActive(JSON.stringify(liveBindings.filter(binding => !["KP_9", "KP_Prior"].includes(binding.key)))), false, "missing workspace-9 bindings must trigger restoration");
+assert.equal(Model.bindingsAreActive(JSON.stringify(liveBindings.filter(binding => !(binding.key === "KP_End" && binding.modmask === 64)))), false, "a missing Num Lock-off alias must trigger restoration");
+for (const replacement of [{ modmask: 0 }, { submap: "other-mode" }, { description: "Unrelated action" }, { key: "KP_Decimal" }]) {
+  const damaged = liveBindings.map((binding, index) => index === 0 ? { ...binding, ...replacement } : binding);
+  assert.equal(Model.bindingsAreActive(JSON.stringify(damaged)), false, `a wrong binding field must trigger restoration: ${JSON.stringify(replacement)}`);
+}
+assert.equal(Model.bindingsAreActive(JSON.stringify([...liveBindings, { key: "A", modmask: 64, submap: "", description: "Other shortcut" }])), true, "unrelated desktop bindings do not affect the plugin health check");
 assert.equal(Model.bindingsAreActive(JSON.stringify([
   { key: "KP_Enter", description: "Open terminal" },
   { key: "KP_1", description: "Move window to workspace 1" },

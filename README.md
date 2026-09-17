@@ -17,7 +17,12 @@ restored automatically after Hyprland reloads its configuration.
 ## Guide
 
 Toggle the guide with `Super + Ctrl + keypad Divide`. It teaches the shortcuts
-concept-first, with a workspace illustration and four main actions:
+with four topic buttons and a separate before/after example for each action.
+Numbered boxes represent workspaces; the smaller labeled boxes inside represent
+windows. Blue outlines mark where you are focused. The examples resize with the
+guide, including when Hyprland tiles it into a narrow window.
+
+The four topics are:
 
 - **Switch focus** — move the focus outline to another workspace, occupied or empty;
   windows stay where they are.
@@ -27,10 +32,11 @@ concept-first, with a workspace illustration and four main actions:
 - **Consolidate gaps** — shift unprotected workspace groups left into blank
   numeric workspaces; add `Alt` to limit this to the focused monitor.
 
-The illustrations show examples: focus moves to an occupied workspace, and a
-window moves to a blank one. Either action also works with the other target
-state. Consolidation selects blank destinations; protected windows can preserve
-gaps.
+The examples show focus moving while windows stay put, and a window moving to a
+blank workspace with focus following it. Either action works with occupied or
+empty targets. In the consolidation example, select **Protect Photos** to see
+why a protected window leaves a gap. **All monitors** and **This monitor** show
+the corresponding shortcuts. These controls only change the illustration.
 
 Choose **Show full shortcut list** in the guide to expand the live binding
 inventory: workspace switching and moving (including Num Lock-off variants),
@@ -59,8 +65,10 @@ only that file when it carries the
 | `Super + Ctrl + Shift + Alt + keypad Enter` | Consolidate the focused monitor without taking IDs owned by another monitor. |
 
 Protected windows remain in place during consolidation, while unprotected
-neighbors can move. Gaps can be intentional. Consolidation is silent, and
-protection ends with the window or Hyprland.
+neighbors can move. Manual window moves are still allowed. A notification
+confirms protection; there is no permanent title-bar icon. Protection ends with
+the window, Hyprland, or a Hyprland configuration reload. Consolidation does not follow the moved windows, may
+leave intentional gaps, and recalculates window layouts at the destination.
 
 ## Requirements
 

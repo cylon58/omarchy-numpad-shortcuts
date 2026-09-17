@@ -67,3 +67,42 @@ assert.doesNotMatch(qml, /Component\.onCompleted/);
 assert.doesNotMatch(qml, /\/home\/[^/]+/);
 
 console.log("Guide model and panel contract tests passed");
+
+// The rendered diagrams must tell the same story as the actual actions.
+const focus = GuideModel.lesson(0, false);
+assert.deepEqual(focus.before.map(s => [s.number, s.app]), focus.after.map(s => [s.number, s.app]));
+assert.equal(focus.before.find(s => s.focused).number, 2);
+assert.equal(focus.after.find(s => s.focused).number, 4);
+const move = GuideModel.lesson(1, false);
+assert.equal(move.before.find(s => s.focused).app, "Notes");
+assert.equal(move.after.find(s => s.focused).app, "Notes");
+assert.equal(move.after.find(s => s.focused).number, 4);
+assert.equal(move.after.find(s => s.number === 2).app, "");
+
+// Execute the real consolidation module against each illustrated desktop;
+// compare its resulting app locations to the guide's claimed AFTER picture.
+const { spawnSync } = require("node:child_process");
+for (const protectedExample of [false, true]) {
+  const example = GuideModel.lesson(3, false, protectedExample);
+  const windows = example.before.filter(s => s.app).map(s =>
+    `{ address = "${s.app}", workspace = { id = ${s.number} } }`).join(",");
+  const script = `
+    local windows = {${windows}}
+    hl = {
+      get_windows = function() return windows end,
+      dispatch = function(move) move.window.workspace.id = move.workspace end,
+      dsp = { window = { move = function(options) return options end } },
+      notification = { create = function() end }
+    }
+    dofile("WindowActions.lua")
+    ${protectedExample ? 'NumpadShortcuts.protected.Photos = true' : ''}
+    NumpadShortcuts.consolidateGlobal()
+    for _, w in ipairs(windows) do io.write(w.address, "=", w.workspace.id, "\\n") end
+  `;
+  const actual = spawnSync("lua", ["-e", script], { cwd: root, encoding: "utf8", timeout: 5000 });
+  assert.equal(actual.status, 0, actual.stderr);
+  assert.deepEqual(actual.stdout.trim().split("\n").sort(),
+    example.after.filter(s => s.app).map(s => `${s.app}=${s.number}`).sort(),
+    "consolidation picture matches real Lua movement, including protected gaps");
+}
+console.log("Guide examples agree with the real consolidation module");

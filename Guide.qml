@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -8,35 +9,31 @@ import "GuideModel.js" as GuideModel
 
 Item {
   id: root
-
   property var shell: null
   property var manifest: null
   property var service: null
   property bool opened: false
   property bool fullListExpanded: false
+  property int selectedLesson: 0
+  property bool localOnly: false
+  property bool protectExample: false
   property var launcherResult: ({ message: "", severity: "" })
   readonly property var sections: Model.guideSections()
+  readonly property var example: GuideModel.lesson(selectedLesson, localOnly, protectExample)
   readonly property var shortcutRows: GuideModel.fullShortcutRows(Model.bindings())
   readonly property string launcherHelperPath: manifest && manifest.__sourceDir
     ? manifest.__sourceDir + "/bin/manage-launcher-entry"
     : decodeURIComponent(Qt.resolvedUrl("bin/manage-launcher-entry").toString().replace(/^file:\/\//, ""))
-  readonly property string artworkExplanation: "Read the four panels from left to right: switch focus, move a window, protect a window, and consolidate gaps. A bright blue focus outline marks the focused workspace. A filled window glyph means that workspace is occupied; a dashed blank workspace is empty. Arrows show the focus changing, a window moving, or the before-and-after consolidation. The blue pin is the protection marker: that window stays put during consolidation."
 
   function open(_payloadJson) {
     opened = true
     Qt.callLater(function() { closeButton.forceActiveFocus() })
   }
-
-  function close() {
-    launcherConfirmation.close()
-    opened = false
-  }
-
+  function close() { launcherConfirmation.close(); opened = false }
   function requestClose() {
     if (shell && typeof shell.hide === "function" && manifest && manifest.id) shell.hide(manifest.id)
     else close()
   }
-
   function installLauncher() {
     if (launcherProcess.running) return
     launcherResult = { message: "Adding launcher entry…", severity: "" }
@@ -48,188 +45,214 @@ Item {
     id: launcherProcess
     running: false
     command: []
-    onExited: function(exitCode) {
-      root.launcherResult = GuideModel.launcherState(exitCode, "install")
-    }
+    onExited: function(exitCode) { root.launcherResult = GuideModel.launcherState(exitCode, "install") }
   }
 
-  component GuideText: TextEdit {
+  component Copy: Text {
     Layout.fillWidth: true
-    readOnly: true
-    selectByMouse: true
-    wrapMode: TextEdit.Wrap
-    color: "#c8cedf"
+    wrapMode: Text.Wrap
+    color: "#b5c0d3"
+    font.family: "sans-serif"
     font.pixelSize: 14
-    Accessible.role: Accessible.StaticText
-    Accessible.name: text
+    lineHeight: 1.15
+    textFormat: Text.PlainText
   }
-
-  component GuideButton: Button {
-    palette.button: "#303849"
-    palette.buttonText: "#f5f7ff"
-    palette.highlight: "#72b5ff"
-    palette.highlightedText: "#111722"
+  component ActionButton: Button {
+    id: button
+    implicitHeight: 36
+    implicitWidth: contentItem.implicitWidth + 26
+    padding: 10
+    contentItem: Text {
+      text: button.text
+      color: button.enabled ? "#eaf0fb" : "#78859a"
+      font.pixelSize: 13
+      horizontalAlignment: Text.AlignHCenter
+      verticalAlignment: Text.AlignVCenter
+    }
+    background: Rectangle {
+      radius: 6
+      color: button.down ? "#34435b" : button.hovered ? "#2a374c" : "#202c3e"
+      border.color: button.activeFocus ? "#84bbff" : "#3c4b62"
+    }
   }
 
   FloatingWindow {
     id: window
     visible: root.opened
     title: "Numpad Shortcuts"
-    implicitWidth: 900
-    implicitHeight: 760
-    minimumSize: Qt.size(600, 480)
-    color: "#171c26"
+    implicitWidth: 760
+    implicitHeight: 840
+    minimumSize: Qt.size(460, 480)
+    color: "#101620"
+    onVisibleChanged: { if (!visible && root.opened) root.requestClose() }
+    Shortcut { sequence: "Escape"; enabled: root.opened && !launcherConfirmation.visible; onActivated: root.requestClose() }
 
-    onVisibleChanged: {
-      if (!visible && root.opened) root.requestClose()
-    }
-
-    Shortcut {
-      sequence: "Escape"
-      enabled: root.opened
-      onActivated: root.requestClose()
-    }
-
-    ColumnLayout {
+    Rectangle {
+      objectName: "guideSurface"
       anchors.fill: parent
-      anchors.margins: 24
-      spacing: 16
+      color: window.color
+    ColumnLayout {
+      anchors.top: parent.top
+      anchors.bottom: parent.bottom
+      anchors.horizontalCenter: parent.horizontalCenter
+      anchors.margins: window.width < 550 ? 16 : 22
+      width: Math.min(parent.width - (window.width < 550 ? 32 : 44), 760)
+      spacing: 10
+
+      RowLayout {
+        Layout.fillWidth: true
+        Copy { text: "Numpad Shortcuts"; color: "#f3f5fb"; font.pixelSize: 26; font.bold: true }
+        Text { text: "1–9  ·  0 = 10"; color: "#84bbff"; font.pixelSize: 13 }
+      }
+      Copy { text: "Examples only — these controls don’t move your windows. Numbered boxes are workspaces; smaller boxes inside are windows."; font.pixelSize: 13 }
+
+      // Navigation stays visible while the example and shortcut list scroll.
+      GridLayout {
+        Layout.fillWidth: true
+        columns: 2
+        columnSpacing: 8
+        rowSpacing: 8
+        Repeater {
+          model: root.sections
+          delegate: Button {
+            id: topic
+            required property int index
+            required property var modelData
+            objectName: "lesson-" + index
+            Layout.fillWidth: true
+            Layout.preferredWidth: 1
+            implicitHeight: 36
+            padding: 10
+            checkable: true
+            checked: root.selectedLesson === index
+            Accessible.name: modelData.title
+            onClicked: {
+              root.selectedLesson = index
+              root.fullListExpanded = false
+              scroll.contentItem.contentY = 0
+            }
+            contentItem: Text {
+              text: (topic.index + 1) + "   " + topic.modelData.title
+              font.pixelSize: 14
+              font.bold: topic.checked
+              color: topic.checked ? "#e6f1ff" : "#b5c0d3"
+              verticalAlignment: Text.AlignVCenter
+            }
+            background: Rectangle {
+              radius: 7
+              color: topic.checked ? "#253d5b" : topic.hovered ? "#233044" : "#1a2433"
+              border.color: topic.checked || topic.activeFocus ? "#84bbff" : "#344158"
+            }
+          }
+        }
+      }
 
       ScrollView {
         id: scroll
+        objectName: "lessonViewport"
         Layout.fillWidth: true
         Layout.fillHeight: true
         contentWidth: availableWidth
         clip: true
-
+        ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
         ColumnLayout {
           width: scroll.availableWidth
-          spacing: 16
-
-          GuideText {
-            text: "Numpad Shortcuts"
-            color: "#f5f7ff"
-            font.pixelSize: 30
-            font.bold: true
-          }
-          GuideText {
-            text: "Use the number pad to find your workspace, move a window, and tidy up without disturbing protected windows."
-            font.pixelSize: 16
-          }
-          GuideText {
-            text: "Toggle this guide: Super + Ctrl + Numpad Divide"
-            color: "#8ac5ff"
-          }
-
-          Image {
+          spacing: 12
+          Rectangle {
+            visible: !root.fullListExpanded
             Layout.fillWidth: true
-            Layout.preferredHeight: width * 3 / 8
-            source: "assets/numpad-workspace-concepts.png"
-            fillMode: Image.PreserveAspectFit
-            smooth: true
-            Accessible.role: Accessible.Graphic
-            Accessible.name: "Four workspace concepts"
-            Accessible.description: root.artworkExplanation
-          }
-          GuideText { text: root.artworkExplanation }
-
-          GridLayout {
-            Layout.fillWidth: true
-            columns: width >= 740 ? 2 : 1
-            columnSpacing: 12
-            rowSpacing: 12
-
-            Repeater {
-              model: root.sections
-              delegate: Rectangle {
-                id: card
-                required property var modelData
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                implicitWidth: 320
-                implicitHeight: cardContent.implicitHeight + 32
-                color: "#222a38"
-                radius: 12
-                border.color: "#38465c"
-
-                ColumnLayout {
-                  id: cardContent
-                  anchors.fill: parent
-                  anchors.margins: 16
-                  spacing: 8
-                  GuideText {
-                    text: card.modelData.summary
-                    color: "#8ac5ff"
-                    font.pixelSize: 13
-                    font.bold: true
-                  }
-                  GuideText {
-                    text: card.modelData.title
-                    color: "#f5f7ff"
-                    font.pixelSize: 19
-                    font.bold: true
-                  }
-                  GuideText { text: card.modelData.details }
+            implicitHeight: lessonBody.implicitHeight + 28
+            color: "#1a2332"
+            radius: 10
+            border.color: "#344158"
+            ColumnLayout {
+              id: lessonBody
+              anchors.left: parent.left
+              anchors.right: parent.right
+              anchors.top: parent.top
+              anchors.margins: 14
+              spacing: 6
+              Copy { text: root.sections[root.selectedLesson].title; font.pixelSize: 20; font.bold: true; color: "#f3f5fb" }
+              Copy {
+                text: root.selectedLesson === 3 ? root.example.action : root.sections[root.selectedLesson].summary.replace(/keypad/g, "Numpad")
+                color: "#84bbff"; font.pixelSize: 13
+              }
+              RowLayout {
+                visible: root.selectedLesson === 3
+                ActionButton { text: root.localOnly ? "All monitors" : "✓ All monitors"; onClicked: root.localOnly = false }
+                ActionButton { text: root.localOnly ? "✓ This monitor" : "This monitor"; onClicked: root.localOnly = true }
+                ActionButton {
+                  text: root.protectExample ? "✓ Protect Photos" : "Protect Photos"
+                  checkable: true
+                  checked: root.protectExample
+                  onClicked: root.protectExample = checked
+                  Accessible.description: "Example only: show how a protected window leaves a gap"
                 }
               }
+              Copy { text: "BEFORE"; font.pixelSize: 10; font.bold: true }
+              WorkspaceStrip { Layout.fillWidth: true; spaces: root.example.before }
+              Rectangle {
+                Layout.fillWidth: true
+                implicitHeight: actionText.implicitHeight + 16
+                color: "#253d5b"
+                radius: 5
+                Text {
+                  id: actionText
+                  anchors.left: parent.left
+                  anchors.right: parent.right
+                  anchors.margins: 10
+                  anchors.verticalCenter: parent.verticalCenter
+                  text: "↓  Press " + root.example.action
+                  wrapMode: Text.Wrap
+                  color: "#daebff"
+                  font.pixelSize: 13
+                  font.bold: true
+                  textFormat: Text.PlainText
+                }
+              }
+              Copy { text: "AFTER"; font.pixelSize: 10; font.bold: true }
+              WorkspaceStrip { Layout.fillWidth: true; spaces: root.example.after }
+              Copy { objectName: "exampleResult"; text: root.example.result; color: "#e5ecf7"; font.pixelSize: 14; font.bold: true }
             }
           }
-
-          GuideButton {
-            text: "Show full shortcut list"
-            checkable: true
-            checked: root.fullListExpanded
-            onClicked: root.fullListExpanded = checked
-            Accessible.description: checked ? "Full shortcut list expanded" : "Full shortcut list collapsed"
-          }
-
+          Copy { visible: !root.fullListExpanded; text: root.example.note; font.pixelSize: 13 }
           ColumnLayout {
             visible: root.fullListExpanded
             Layout.fillWidth: true
-            spacing: 12
-            GuideText {
-              text: "Key names separated by / are Num Lock on/off variants of the same shortcut. Numpad 0 selects workspace 10."
-            }
+            spacing: 10
+            Copy { text: "Full shortcut list"; font.pixelSize: 20; color: "#f3f5fb"; font.bold: true }
+            Copy { text: "Num Lock can be on or off. Names separated by / are two names for the same keypad key."; font.pixelSize: 13 }
             Repeater {
               model: root.shortcutRows
               delegate: ColumnLayout {
-                id: shortcutRow
                 required property var modelData
                 Layout.fillWidth: true
                 spacing: 3
-                GuideText {
-                  text: shortcutRow.modelData.shortcut
-                  color: "#8ac5ff"
-                  font.bold: true
-                }
-                GuideText { text: shortcutRow.modelData.action }
+                Copy { text: parent.modelData.shortcut; color: "#84bbff"; font.pixelSize: 13 }
+                Copy { text: parent.modelData.action; font.pixelSize: 13 }
               }
             }
           }
         }
       }
-
-      GuideText {
-        visible: text.length > 0
-        text: root.launcherResult.message
-        color: root.launcherResult.severity === "error" ? "#ffbf99" : "#a9dbc5"
-      }
+      Copy { visible: text.length > 0; text: root.launcherResult.message; color: root.launcherResult.severity === "error" ? "#ffbf99" : "#a9dbc5"; font.pixelSize: 12 }
       RowLayout {
         Layout.fillWidth: true
-        GuideButton {
-          text: "Add to launcher"
-          enabled: !launcherProcess.running
-          onClicked: launcherConfirmation.open()
+        ActionButton {
+          text: root.fullListExpanded ? "Back to examples" : "Show full shortcut list"
+          checkable: true
+          checked: root.fullListExpanded
+          onClicked: {
+            root.fullListExpanded = checked
+            scroll.contentItem.contentY = 0
+          }
         }
         Item { Layout.fillWidth: true }
-        GuideButton {
-          id: closeButton
-          text: "Close"
-          onClicked: root.requestClose()
-        }
+        ActionButton { text: "Add to launcher"; enabled: !launcherProcess.running; onClicked: launcherConfirmation.open() }
+        ActionButton { id: closeButton; text: "Close"; onClicked: root.requestClose() }
       }
     }
-
+    }
     Dialog {
       id: launcherConfirmation
       anchors.centerIn: parent
@@ -239,7 +262,7 @@ Item {
       standardButtons: Dialog.Yes | Dialog.Cancel
       onAccepted: root.installLauncher()
       contentItem: Label {
-        text: "Create a Numpad Shortcuts entry in your user applications folder? It opens this guide. Existing custom launcher entries will not be overwritten."
+        text: "Add Numpad Shortcuts to your app launcher? It will open this guide."
         wrapMode: Text.Wrap
       }
     }

@@ -102,7 +102,7 @@ function luaString(value) {
 function applyScript(pluginLuaPath, guideLauncherPath) {
   var commands = [
     'hl.config({ ["input.numlock_by_default"] = true })',
-    "dofile('" + pluginLuaPath.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "')"
+    "dofile(" + luaString(pluginLuaPath) + ")"
   ];
   var all = bindings();
   for (var i = 0; i < all.length; i++) {
@@ -151,7 +151,7 @@ function guideSections() {
       title: "Protect a window",
       summary: "Super + Ctrl + keypad Enter",
       shortcuts: descriptionsFor(function(binding) { return binding.description === "Toggle window consolidation protection"; }),
-      details: "The focused window receives a protection marker and stays put during consolidation for the current session. Protection is session-only."
+      details: "A notification confirms whether the focused window is protected from consolidation. Protection is session-only, with no persistent badge, and resets on a Hyprland configuration reload. You can still move it manually with Super + Shift + a keypad number."
     },
     {
       title: "Consolidate gaps",
@@ -169,11 +169,16 @@ function cleanupScript() {
   return commands.join("\n");
 }
 
-function activeInstanceSignature(output) {
+function activeInstanceSignature(output, expectedSignature) {
   try {
     var instances = JSON.parse(output);
     if (!Array.isArray(instances) || instances.length === 0) return "";
-    return typeof instances[0].instance === "string" ? instances[0].instance : "";
+    if (expectedSignature) {
+      return instances.some(function(instance) {
+        return instance && instance.instance === expectedSignature;
+      }) ? expectedSignature : "";
+    }
+    return instances.length === 1 && instances[0] && typeof instances[0].instance === "string" ? instances[0].instance : "";
   } catch (error) {
     return "";
   }
@@ -187,17 +192,16 @@ function bindingsAreActive(output) {
   try {
     var activeBindings = JSON.parse(output);
     if (!Array.isArray(activeBindings)) return false;
-    var descriptions = [
-      "Open terminal",
-      "Move window to workspace 1",
-      "Toggle window consolidation protection",
-      "Consolidate workspaces on all monitors",
-      "Consolidate workspaces on focused monitor",
-      "Open Numpad Shortcuts guide"
-    ];
-    return descriptions.every(function(description) {
+    var modifierMasks = { SUPER: 64, CTRL: 4, SHIFT: 1, ALT: 8 };
+    return bindings().every(function(expected) {
+      var expectedMask = expected.modifiers.split(" + ").reduce(function(mask, modifier) {
+        return mask | modifierMasks[modifier];
+      }, 0);
       return activeBindings.some(function(binding) {
-        return binding.description === description;
+        return binding && binding.key === expected.key
+          && binding.modmask === expectedMask
+          && binding.submap === ""
+          && binding.description === expected.description;
       });
     });
   } catch (error) {

@@ -42,8 +42,12 @@ Item {
   }
 
   function handleInstances(output) {
-    var signature = Model.activeInstanceSignature(output)
-    if (!signature) return
+    var signature = Model.activeInstanceSignature(output, root.safeEnvironment.HYPRLAND_INSTANCE_SIGNATURE)
+    if (!signature) {
+      root.activeInstanceSignature = ""
+      root.pendingInstanceSignature = ""
+      return
+    }
     if (signature !== root.activeInstanceSignature) {
       root.activeInstanceSignature = signature
       root.applyBindings(signature)
