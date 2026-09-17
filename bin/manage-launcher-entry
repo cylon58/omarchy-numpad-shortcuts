@@ -1,0 +1,62 @@
+#!/bin/sh
+set -eu
+
+if [ "$#" -ne 1 ]; then
+  echo "usage: $0 install|remove" >&2
+  exit 2
+fi
+
+case "$1" in
+  install|remove) operation=$1 ;;
+  *)
+    echo "usage: $0 install|remove" >&2
+    exit 2
+    ;;
+esac
+
+data_home=${XDG_DATA_HOME:-"$HOME/.local/share"}
+applications_dir="$data_home/applications"
+entry="$applications_dir/cylon58-numpad-shortcuts-guide.desktop"
+marker='X-Omarchy-Numpad-Shortcuts-Guide=true'
+
+has_marker() {
+  [ -f "$entry" ] && grep -Fqx "$marker" "$entry"
+}
+
+case "$operation" in
+  install)
+    mkdir -p "$applications_dir"
+    if [ -e "$entry" ]; then
+      if has_marker; then
+        exit 0
+      fi
+      echo "refusing to replace unowned launcher entry: $entry" >&2
+      exit 1
+    fi
+
+    script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
+    plugin_dir=$(CDPATH= cd -- "$script_dir/.." && pwd -P)
+    entry_exec="$plugin_dir/bin/open-guide"
+    temporary_entry=$(mktemp "$applications_dir/.cylon58-numpad-shortcuts-guide.XXXXXX")
+    trap 'rm -f "$temporary_entry"' 0 HUP INT TERM
+    chmod 600 "$temporary_entry"
+    printf '%s\n' \
+      '[Desktop Entry]' \
+      'Type=Application' \
+      'Name=Numpad Shortcuts' \
+      'Comment=Learn Numpad Shortcuts for Omarchy workspaces' \
+      "Exec=$entry_exec" \
+      'Terminal=false' \
+      'NoDisplay=false' \
+      "$marker" >"$temporary_entry"
+    chmod 644 "$temporary_entry"
+    mv -f "$temporary_entry" "$entry"
+    ;;
+  remove)
+    if ! has_marker; then
+      echo "refusing to remove unowned or absent launcher entry: $entry" >&2
+      exit 1
+    fi
+    rm "$entry"
+    ;;
+esac

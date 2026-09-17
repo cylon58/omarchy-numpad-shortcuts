@@ -1,0 +1,12 @@
+#!/bin/sh
+set -eu
+
+if [ "$#" -ne 0 ]; then
+  echo "usage: $0" >&2
+  exit 2
+fi
+
+: "${OMARCHY_PATH:=/usr/share/omarchy}"
+export OMARCHY_PATH
+
+exec /usr/bin/omarchy-shell shell summon cylon58.numpad-shortcuts
