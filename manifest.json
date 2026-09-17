@@ -2,15 +2,17 @@
   "schemaVersion": 1,
   "id": "cylon58.numpad-shortcuts",
   "name": "Numpad Shortcuts",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "author": "cylon58",
   "license": "MIT",
-  "description": "Use Super plus the number pad for workspace switching, moving, and consolidation.",
+  "description": "Use Super plus the number pad for workspace actions and open a built-in guide.",
   "kinds": [
-    "service"
+    "service",
+    "panel"
   ],
   "keepLoaded": true,
   "entryPoints": {
-    "service": "Service.qml"
+    "service": "Service.qml",
+    "panel": "Guide.qml"
   }
 }

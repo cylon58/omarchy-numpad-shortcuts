@@ -7,8 +7,13 @@ const pluginRoot = path.join(__dirname, "..");
 const manifest = JSON.parse(fs.readFileSync(path.join(pluginRoot, "manifest.json"), "utf8"));
 const readme = fs.readFileSync(path.join(pluginRoot, "README.md"), "utf8");
 
-assert.equal(manifest.version, "0.2.0", "the release manifest identifies the window-management feature version");
-assert.match(manifest.description, /switching, moving, and consolidation/, "the manifest advertises the new window-management capabilities");
+// Release contract: a packaged guide must be discoverable to both Omarchy and users.
+assert.equal(manifest.version, "0.3.0");
+assert.deepEqual(manifest.kinds, ["service", "panel"]);
+assert.equal(manifest.entryPoints.panel, "Guide.qml");
+assert.ok(readme.includes("Super + Ctrl + keypad Divide"));
+assert.match(readme, /Add to launcher/i);
+assert.match(manifest.description, /guide/i, "the manifest advertises the guide alongside the window-management capabilities");
 for (const shortcut of [
   "Super + Shift + keypad 1–0",
   "Super + Ctrl + keypad Enter",
