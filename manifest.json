@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "id": "cylon58.numpad-shortcuts",
   "name": "Numpad Shortcuts",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "author": "cylon58",
   "license": "MIT",
-  "description": "Use Super plus the number pad for workspaces and the keypad Enter key for the terminal.",
+  "description": "Use Super plus the number pad for workspace switching, moving, and consolidation.",
   "kinds": [
     "service"
   ],

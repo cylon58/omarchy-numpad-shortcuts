@@ -1,5 +1,23 @@
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
 const Model = require("../Model.js");
+
+const pluginRoot = path.join(__dirname, "..");
+const manifest = JSON.parse(fs.readFileSync(path.join(pluginRoot, "manifest.json"), "utf8"));
+const readme = fs.readFileSync(path.join(pluginRoot, "README.md"), "utf8");
+
+assert.equal(manifest.version, "0.2.0", "the release manifest identifies the window-management feature version");
+assert.match(manifest.description, /switching, moving, and consolidation/, "the manifest advertises the new window-management capabilities");
+for (const shortcut of [
+  "Super + Shift + keypad 1–0",
+  "Super + Ctrl + keypad Enter",
+  "Super + Ctrl + Shift + keypad Enter",
+  "Super + Ctrl + Shift + Alt + keypad Enter"
+]) {
+  assert.ok(readme.includes(shortcut), `README documents ${shortcut}`);
+}
+assert.match(readme, /session-only protection/i, "README explains that protection is session-only");
 
 const bindings = Model.bindings();
 

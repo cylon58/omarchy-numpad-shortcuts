@@ -14,6 +14,19 @@ sets Hyprland’s `input:numlock_by_default` option to `true` for the current
 session, so newly initialized keypads start in numeric mode. The shortcuts are
 restored automatically after Hyprland reloads its configuration.
 
+## Window management
+
+| Shortcut | Action |
+| --- | --- |
+| `Super + Shift + keypad 1–0` | Move the focused window to workspace 1–10. |
+| `Super + Ctrl + keypad Enter` | Toggle session-only protection for the focused window. |
+| `Super + Ctrl + Shift + keypad Enter` | Consolidate numeric workspaces 1–10 across monitors. |
+| `Super + Ctrl + Shift + Alt + keypad Enter` | Consolidate the focused monitor without taking IDs owned by another monitor. |
+
+Protected windows remain in place during consolidation, while unprotected
+neighbors can move. Gaps can be intentional. Consolidation is silent, and
+protection ends with the window or Hyprland.
+
 ## Requirements
 
 - Omarchy with Quickshell and Hyprland
@@ -45,7 +58,8 @@ The service runs only the fixed `/usr/bin/hyprctl` executable with a minimal
 environment. It has no network access, shell execution, elevated privileges,
 or retained command output. It polls the active Hyprland instance and binding
 table, restoring the shortcuts when a reload clears them. Binding updates are
-stopped after 10 seconds if `hyprctl` does not complete.
+stopped after 10 seconds if `hyprctl` does not complete. The same fixed
+evaluation path loads this plugin's Lua module.
 
 ## License
 
